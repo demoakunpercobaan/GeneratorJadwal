@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SIJADWAL — Generator Jadwal Kuliah Otomatis</title>
+<meta name="description" content="Generator jadwal mata kuliah otomatis anti-bentrok. Bekerja offline, siap diinstal sebagai aplikasi.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d9488">
+<meta name="background-color" content="#0b1220">
+
+<!-- Favicon & ikon -->
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+<!-- iOS PWA support -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIJADWAL">
+
+<!-- Windows tile -->
+<meta name="msapplication-TileColor" content="#0d9488">
+<meta name="msapplication-TileImage" content="icons/icon-192.png">
+<style>
+:root{
+  --navy:#0b1220; --navy2:#141f38; --navy3:#1c2b4a;
+  --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1;
+  --amber:#d97706; --amber-l:#fef3c7;
+  --rose:#e11d48; --rose-l:#ffe4e6;
+  --green:#16a34a; --green-l:#dcfce7;
+  --bg:#f4f6fb; --card:#ffffff; --border:#e3e8f0;
+  --text:#101828; --muted:#667085; --radius:12px;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+}
+a{color:inherit;}
+button{font-family:inherit;}
+::-webkit-scrollbar{height:8px;width:8px;}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px;}
+
+/* Layout */
+#appwrap{display:flex; min-height:100vh;}
+#sidebar{
+  width:250px; background:linear-gradient(180deg,var(--navy),var(--navy2));
+  color:#cbd5e1; flex-shrink:0; position:fixed; top:0; left:0; bottom:0; overflow-y:auto;
+  transition:transform .25s ease; z-index:50;
+}
+.brand{padding:22px 20px 14px; display:flex; align-items:center; gap:10px;}
+.brand .logo{
+  width:34px;height:34px;border-radius:9px;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px;flex-shrink:0;
+}
+.brand .name{color:#fff;font-weight:700;font-size:15.5px;letter-spacing:.2px;}
+.brand .sub{font-size:11px;color:#8291ab;margin-top:1px;}
+nav.menu{padding:10px 12px; margin-top:6px;}
+.menu-label{font-size:11px;color:#5f7195;padding:14px 10px 6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.menu-item{
+  display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:9px;
+  cursor:pointer; color:#b9c4dc; font-size:13.5px; font-weight:500; margin-bottom:2px; user-select:none;
+}
+.menu-item .ic{width:18px;text-align:center;font-size:15px;flex-shrink:0;}
+.menu-item:hover{background:rgba(255,255,255,.06); color:#fff;}
+.menu-item.active{background:var(--teal); color:#fff;}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;}
+
+#main{margin-left:250px; flex:1; min-width:0; display:flex; flex-direction:column;}
+#topbar{
+  background:#fff; border-bottom:1px solid var(--border); padding:14px 24px;
+  display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:30;
+}
+#topbar .left{display:flex;align-items:center;gap:12px;}
+#hamburger{display:none; background:none;border:none;font-size:20px;cursor:pointer;color:var(--text);padding:4px;}
+#pagetitle{font-size:18px;font-weight:700;}
+#pagesub{font-size:12.5px;color:var(--muted);margin-top:1px;}
+#content{padding:22px 24px 60px; flex:1;}
+
+/* Cards / grid */
+.grid{display:grid; gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} }
+@media(max-width:640px){.grid-4{grid-template-columns:1fr;} .grid-2{grid-template-columns:1fr;}}
+
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);}
+.card-pad{padding:18px 20px;}
+.stat-card{padding:18px 20px; display:flex; flex-direction:column; gap:8px;}
+.stat-card .top{display:flex; align-items:center; justify-content:space-between;}
+.stat-card .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.stat-card .num{font-size:26px;font-weight:800;}
+.stat-card .lbl{color:var(--muted); font-size:12.5px;}
+
+.section-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;}
+.section-head h2{margin:0; font-size:17px; font-weight:700;}
+.section-head p{margin:2px 0 0; font-size:12.5px; color:var(--muted);}
+
+.toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+.toolbar .grow{flex:1; min-width:180px;}
+
+input[type=text],input[type=number],input[type=email],input[type=time],select,textarea{
+  width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:8px; font-size:13.5px;
+  background:#fff; color:var(--text); outline:none; font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal); box-shadow:0 0 0 3px rgba(13,148,136,.12);}
+label.field-label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px; color:#344054;}
+.field{margin-bottom:14px;}
+.hint{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+.btn{
+  display:inline-flex; align-items:center; gap:7px; padding:9px 15px; border-radius:8px; border:1px solid transparent;
+  font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap; transition:filter .15s;
+}
+.btn:hover{filter:brightness(0.95);}
+.btn:active{filter:brightness(0.88);}
+.btn-primary{background:var(--teal); color:#fff;}
+.btn-secondary{background:#fff; color:var(--text); border-color:var(--border);}
+.btn-danger{background:#fff; color:var(--rose); border-color:#fecdd3;}
+.btn-danger-solid{background:var(--rose); color:#fff;}
+.btn-ghost{background:transparent; color:var(--muted); border-color:transparent;}
+.btn-sm{padding:6px 10px; font-size:12.5px;}
+.btn-block{width:100%; justify-content:center;}
+.btn[disabled]{opacity:.5; cursor:not-allowed;}
+
+.badge{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:100px; font-size:11.5px; font-weight:700;}
+.badge-teal{background:var(--teal-l); color:var(--teal-d);}
+.badge-amber{background:var(--amber-l); color:#92400e;}
+.badge-rose{background:var(--rose-l); color:#9f1239;}
+.badge-green{background:var(--green-l); color:#166534;}
+.badge-gray{background:#eef1f5; color:#475467;}
+
+table{width:100%; border-collapse:collapse; font-size:13.3px;}
+.table-wrap{overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border);}
+table thead th{
+  text-align:left; padding:11px 14px; background:#f8fafc; color:#475467; font-weight:600;
+  font-size:12px; text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+table tbody td{padding:11px 14px; border-bottom:1px solid #f0f2f6; vertical-align:top;}
+table tbody tr:last-child td{border-bottom:none;}
+table tbody tr:hover{background:#fafbfd;}
+.empty-row td{text-align:center; color:var(--muted); padding:34px 14px;}
+.row-actions{display:flex; gap:6px;}
+.iconbtn{
+  width:29px;height:29px;border-radius:7px;border:1px solid var(--border);background:#fff;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#475467;
+}
+.iconbtn:hover{background:#f2f4f7;}
+.iconbtn.danger{color:var(--rose); border-color:#fecdd3;}
+
+/* Modal */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:flex-start; justify-content:center;
+  z-index:100; padding:40px 16px; overflow-y:auto;
+}
+.modal-backdrop.show{display:flex;}
+.modal{background:#fff; border-radius:14px; width:100%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden;}
+.modal.wide{max-width:680px;}
+.modal-head{padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;}
+.modal-head h3{margin:0;font-size:16px;font-weight:700;}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);}
+.modal-body{padding:20px 22px; max-height:65vh; overflow-y:auto;}
+.modal-foot{padding:16px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px;}
+.checkbox-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; max-height:160px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:10px;}
+.checkbox-row{display:flex; align-items:center; gap:8px; font-size:13px;}
+
+/* Toast */
+#toast-wrap{position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:10px; max-width:340px;}
+.toast{
+  background:#101828; color:#fff; padding:12px 16px; border-radius:10px; font-size:13px; box-shadow:0 8px 24px rgba(0,0,0,.25);
+  display:flex; align-items:flex-start; gap:10px; animation:slidein .2s ease;
+}
+.toast.success{background:#0f5132;} .toast.error{background:#7f1d1d;} .toast.info{background:#1e293b;} .toast.warn{background:#78350f;}
+@keyframes slidein{from{transform:translateX(30px);opacity:0;} to{transform:translateX(0);opacity:1;}}
+
+/* Kalender */
+.cal-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:#fff;}
+table.cal{min-width:820px;}
+table.cal th{background:#f8fafc;}
+table.cal td.slotcell{width:110px; font-weight:600; color:#475467; background:#fbfcfe; white-space:nowrap; font-size:12.5px;}
+table.cal td.daycell{vertical-align:top; min-width:150px; padding:8px;}
+.session-card{
+  background:#f0fdfa; border:1px solid #99f6e4; border-left:4px solid var(--teal); border-radius:8px; padding:7px 9px; margin-bottom:6px;
+  font-size:12px; cursor:pointer;
+}
+.session-card:hover{background:#e6fffb;}
+.session-card.conflict{background:#fff1f2; border-color:#fecdd3; border-left-color:var(--rose);}
+.session-card .mk{font-weight:700; margin-bottom:2px;}
+.session-card .meta{color:var(--muted); font-size:11px;}
+
+.conflict-item{border:1px solid #fecdd3; background:var(--rose-l); border-radius:9px; padding:10px 13px; margin-bottom:8px; font-size:13px; color:#7f1d1d;}
+.fail-item{border:1px solid #fde68a; background:var(--amber-l); border-radius:9px; padding:10px 13px; margin-bottom:8px; font-size:13px; color:#78350f;}
+.success-banner{border:1px solid #86efac; background:var(--green-l); border-radius:9px; padding:12px 14px; margin-bottom:12px; font-size:13.5px; color:#166534;}
+
+.page{display:none;}
+.page.active{display:block;}
+
+.two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+@media(max-width:800px){.two-col{grid-template-columns:1fr;}}
+
+.small-muted{font-size:12px;color:var(--muted);}
+
+/* Install PWA button */
+#install-btn{display:none; align-items:center; gap:7px; background:var(--teal); color:#fff; border:none; padding:9px 14px;
+  border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;}
+#install-btn.show{display:inline-flex;}
+#install-sidebar-btn{display:none; margin:14px 12px 6px; padding:10px 12px; border-radius:9px; background:rgba(13,148,136,.18);
+  border:1px solid rgba(13,148,136,.4); color:#fff; font-size:12.5px; font-weight:600; cursor:pointer; align-items:center; gap:8px;}
+#install-sidebar-btn.show{display:flex;}
+.pwa-badge{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:#5eead4; margin-top:2px;}
+
+/* Responsive sidebar */
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);}
+  #sidebar-overlay.show{display:block;}
+  #main{margin-left:0;}
+  #hamburger{display:inline-flex;}
+  .grid-4{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:520px){
+  #content{padding:16px;}
+  #topbar{padding:12px 16px;}
+  .modal{max-width:100%; margin:0 4px;}
+  .checkbox-grid{grid-template-columns:1fr;}
+}
+
+/* Print */
+@media print{
+  #sidebar,#topbar,.toolbar,.section-head .btn,#toast-wrap,.no-print{display:none !important;}
+  #main{margin-left:0 !important;}
+  #content{padding:0 !important;}
+  body{background:#fff;}
+  .page{display:none !important;}
+  .page.print-active{display:block !important;}
+  .card{box-shadow:none; border:1px solid #ccc;}
+}
+</style>
+</head>
+<body>
+
+<div id="appwrap">
+  <div id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+  <aside id="sidebar">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="Logo SIJADWAL" class="logo" style="object-fit:contain; background:none;">
+      <div>
+        <div class="name">SIJADWAL</div>
+        <div class="sub">Generator Jadwal Otomatis</div>
+      </div>
+    </div>
+    <button id="install-sidebar-btn" onclick="triggerInstall()">⬇️ <span>Instal Aplikasi Ini</span></button>
+    <nav class="menu" id="menu">
+      <div class="menu-label">Utama</div>
+      <div class="menu-item" data-page="dashboard"><span class="ic">🏠</span> Dashboard</div>
+      <div class="menu-label">Data Master</div>
+      <div class="menu-item" data-page="dosen"><span class="ic">👨‍🏫</span> Data Dosen</div>
+      <div class="menu-item" data-page="matkul"><span class="ic">📘</span> Mata Kuliah</div>
+      <div class="menu-item" data-page="kelas"><span class="ic">🎓</span> Kelas</div>
+      <div class="menu-item" data-page="ruangan"><span class="ic">🏫</span> Ruangan</div>
+      <div class="menu-item" data-page="pengaturan"><span class="ic">⚙️</span> Hari &amp; Slot Jam</div>
+      <div class="menu-label">Penjadwalan</div>
+      <div class="menu-item" data-page="generator"><span class="ic">🪄</span> Generator Jadwal</div>
+      <div class="menu-item" data-page="kalender"><span class="ic">📅</span> Kalender Mingguan</div>
+      <div class="menu-label">Lainnya</div>
+      <div class="menu-item" data-page="data"><span class="ic">💾</span> Export / Import / Demo</div>
+    </nav>
+  </aside>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="left">
+        <button id="hamburger" onclick="toggleSidebar()">☰</button>
+        <div>
+          <div id="pagetitle">Dashboard</div>
+          <div id="pagesub">Ringkasan data dan status jadwal</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="install-btn" onclick="triggerInstall()">⬇️ Instal Aplikasi</button>
+        <button class="btn btn-secondary btn-sm" onclick="goPage('data')">💾 Backup</button>
+      </div>
+    </div>
+
+    <div id="content">
+
+      <!-- DASHBOARD -->
+      <section class="page" id="page-dashboard">
+        <div class="grid grid-4" id="dash-stats" style="margin-bottom:18px;"></div>
+        <div class="two-col">
+          <div class="card card-pad">
+            <div class="section-head" style="margin-bottom:12px;"><h2>Status Generator</h2></div>
+            <div id="dash-genstatus"></div>
+          </div>
+          <div class="card card-pad">
+            <div class="section-head" style="margin-bottom:12px;"><h2>Langkah Cepat</h2></div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn btn-secondary btn-block" onclick="goPage('dosen')">➕ Tambah Dosen</button>
+              <button class="btn btn-secondary btn-block" onclick="goPage('matkul')">➕ Tambah Mata Kuliah</button>
+              <button class="btn btn-secondary btn-block" onclick="goPage('kelas')">➕ Tambah Kelas</button>
+              <button class="btn btn-secondary btn-block" onclick="goPage('ruangan')">➕ Tambah Ruangan</button>
+              <button class="btn btn-primary btn-block" onclick="goPage('generator')">🪄 Buka Generator Jadwal</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOSEN -->
+      <section class="page" id="page-dosen">
+        <div class="section-head">
+          <div><h2>Data Dosen</h2><p>Kelola daftar dosen pengampu mata kuliah.</p></div>
+          <button class="btn btn-primary" onclick="openDosenModal()">➕ Tambah Dosen</button>
+        </div>
+        <div class="toolbar"><input type="text" class="grow" id="search-dosen" placeholder="🔎 Cari nama / kode / email dosen..." oninput="renderDosen()"></div>
+        <div class="table-wrap"><table><thead><tr><th>Kode</th><th>Nama Dosen</th><th>Email</th><th>Jml Matkul Diampu</th><th style="width:100px;">Aksi</th></tr></thead><tbody id="tbl-dosen"></tbody></table></div>
+      </section>
+
+      <!-- MATA KULIAH -->
+      <section class="page" id="page-matkul">
+        <div class="section-head">
+          <div><h2>Mata Kuliah</h2><p>Kelola mata kuliah, dosen pengampu, dan kelas yang mengambilnya.</p></div>
+          <button class="btn btn-primary" onclick="openMatkulModal()">➕ Tambah Mata Kuliah</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" class="grow" id="search-matkul" placeholder="🔎 Cari kode / nama mata kuliah..." oninput="renderMatkul()">
+          <select id="filter-matkul-jenis" style="max-width:170px;" onchange="renderMatkul()">
+            <option value="">Semua Jenis</option><option value="Teori">Teori</option><option value="Praktikum">Praktikum</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Kode</th><th>Nama</th><th>SKS</th><th>Jenis</th><th>Dosen</th><th>Kelas</th><th>Sesi/Minggu</th><th style="width:100px;">Aksi</th></tr></thead><tbody id="tbl-matkul"></tbody></table></div>
+      </section>
+
+      <!-- KELAS -->
+      <section class="page" id="page-kelas">
+        <div class="section-head">
+          <div><h2>Kelas</h2><p>Kelola kelompok kelas beserta jumlah mahasiswanya.</p></div>
+          <button class="btn btn-primary" onclick="openKelasModal()">➕ Tambah Kelas</button>
+        </div>
+        <div class="toolbar"><input type="text" class="grow" id="search-kelas" placeholder="🔎 Cari nama kelas..." oninput="renderKelas()"></div>
+        <div class="table-wrap"><table><thead><tr><th>Nama Kelas</th><th>Jumlah Mahasiswa</th><th>Jml Matkul Diambil</th><th style="width:100px;">Aksi</th></tr></thead><tbody id="tbl-kelas"></tbody></table></div>
+      </section>
+
+      <!-- RUANGAN -->
+      <section class="page" id="page-ruangan">
+        <div class="section-head">
+          <div><h2>Ruangan</h2><p>Kelola ruang kelas dan laboratorium beserta kapasitasnya.</p></div>
+          <button class="btn btn-primary" onclick="openRuanganModal()">➕ Tambah Ruangan</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" class="grow" id="search-ruangan" placeholder="🔎 Cari nama ruangan..." oninput="renderRuangan()">
+          <select id="filter-ruangan-jenis" style="max-width:170px;" onchange="renderRuangan()">
+            <option value="">Semua Jenis</option><option value="Kelas">Kelas</option><option value="Lab">Lab</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Nama Ruangan</th><th>Kapasitas</th><th>Jenis</th><th style="width:100px;">Aksi</th></tr></thead><tbody id="tbl-ruangan"></tbody></table></div>
+      </section>
+
+      <!-- PENGATURAN -->
+      <section class="page" id="page-pengaturan">
+        <div class="section-head"><div><h2>Pengaturan Hari &amp; Slot Jam</h2><p>Tentukan hari perkuliahan aktif dan slot jam yang tersedia untuk penjadwalan.</p></div></div>
+        <div class="two-col">
+          <div class="card card-pad">
+            <h3 style="margin-top:0;font-size:14px;">Hari Aktif</h3>
+            <div id="hari-checklist" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;"></div>
+          </div>
+          <div class="card card-pad">
+            <div class="section-head" style="margin-bottom:10px;"><h3 style="margin:0;font-size:14px;">Slot Jam</h3>
+              <button class="btn btn-secondary btn-sm" onclick="openSlotModal()">➕ Tambah Slot</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Mulai</th><th>Selesai</th><th style="width:80px;">Aksi</th></tr></thead><tbody id="tbl-slot"></tbody></table></div>
+            <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="generateDefaultSlots()">⚡ Buat Slot Default (5x100 menit)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENERATOR -->
+      <section class="page" id="page-generator">
+        <div class="section-head">
+          <div><h2>Generator Jadwal Otomatis</h2><p>Buat jadwal kuliah otomatis bebas bentrok berdasarkan data yang sudah dimasukkan.</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="runCekBentrok()">🔍 Cek Bentrok</button>
+            <button class="btn btn-secondary" onclick="runPerbaikiBentrok()">🛠️ Perbaiki Bentrok Otomatis</button>
+            <button class="btn btn-primary" onclick="confirmGenerate()">🪄 Generate Jadwal</button>
+          </div>
+        </div>
+        <div id="gen-result"></div>
+      </section>
+
+      <!-- KALENDER -->
+      <section class="page" id="page-kalender">
+        <div class="section-head">
+          <div><h2>Kalender Jadwal Mingguan</h2><p>Lihat, cari, dan filter jadwal yang sudah dihasilkan.</p></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" id="btn-toggle-view" onclick="toggleKalenderView()">📋 Tampilan Tabel</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨️ Cetak / PDF</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <input type="text" class="grow" id="search-kal" placeholder="🔎 Cari mata kuliah, dosen, kelas, atau ruangan..." oninput="renderKalender()">
+          <select id="filter-kal-hari" onchange="renderKalender()"><option value="">Semua Hari</option></select>
+          <select id="filter-kal-kelas" onchange="renderKalender()"><option value="">Semua Kelas</option></select>
+          <select id="filter-kal-dosen" onchange="renderKalender()"><option value="">Semua Dosen</option></select>
+          <select id="filter-kal-ruangan" onchange="renderKalender()"><option value="">Semua Ruangan</option></select>
+        </div>
+        <div id="kalender-target"></div>
+      </section>
+
+      <!-- DATA -->
+      <section class="page" id="page-data">
+        <div class="section-head"><div><h2>Export / Import / Data Demo</h2><p>Cadangkan data, pindahkan ke perangkat lain, atau coba aplikasi dengan data contoh.</p></div></div>
+        <div class="two-col">
+          <div class="card card-pad">
+            <h3 style="margin-top:0;font-size:14px;">Export Data</h3>
+            <p class="small-muted">Simpan seluruh data (dosen, matkul, kelas, ruangan, pengaturan, dan jadwal) ke file JSON.</p>
+            <button class="btn btn-primary" onclick="exportData()">⬇️ Export ke JSON</button>
+          </div>
+          <div class="card card-pad">
+            <h3 style="margin-top:0;font-size:14px;">Import Data</h3>
+            <p class="small-muted">Muat kembali data dari file JSON hasil export. Data saat ini akan digantikan.</p>
+            <input type="file" id="import-file" accept="application/json" style="margin-bottom:10px;">
+            <button class="btn btn-secondary" onclick="importData()">⬆️ Import dari JSON</button>
+          </div>
+          <div class="card card-pad">
+            <h3 style="margin-top:0;font-size:14px;">Data Demo</h3>
+            <p class="small-muted">Isi aplikasi dengan contoh data dosen, mata kuliah, kelas, dan ruangan untuk mencoba fitur generator.</p>
+            <button class="btn btn-secondary" onclick="loadDemoData()">✨ Muat Data Demo</button>
+          </div>
+          <div class="card card-pad">
+            <h3 style="margin-top:0;font-size:14px;color:var(--rose);">Reset Data</h3>
+            <p class="small-muted">Menghapus semua data secara permanen dari perangkat ini.</p>
+            <button class="btn btn-danger" onclick="resetAllData()">🗑️ Hapus Semua Data</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Print-only area -->
+<section class="page" id="page-print">
+  <div style="padding:24px;">
+    <h2 style="margin:0 0 4px;">Jadwal Kuliah Mingguan</h2>
+    <p class="small-muted" style="margin:0 0 16px;" id="print-date"></p>
+    <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;font-size:12.5px;">
+      <thead><tr style="background:#f1f5f9;"><th>Hari</th><th>Jam</th><th>Mata Kuliah</th><th>Dosen</th><th>Kelas</th><th>Ruangan</th></tr></thead>
+      <tbody id="print-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Generic Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">Judul</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+/* =========================================================
+   STATE & PERSISTENCE
+========================================================= */
+const STORAGE_KEY = 'sijadwal_data_v1';
+const HARI_MASTER = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+
+let state = {
+  dosen: [], matkul: [], kelas: [], ruangan: [],
+  hari: ['Senin','Selasa','Rabu','Kamis','Jumat'],
+  slots: [],
+  jadwal: [], gagal: []
+};
+
+function uid(prefix){ return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('Gagal menyimpan data ke localStorage: '+e.message,'error'); }
+}
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      state = Object.assign({dosen:[],matkul:[],kelas:[],ruangan:[],hari:['Senin','Selasa','Rabu','Kamis','Jumat'],slots:[],jadwal:[],gagal:[]}, parsed);
+    }catch(e){ console.error('State rusak, memakai default.', e); }
+  }
+}
+
+/* Getters */
+const getDosen = id => state.dosen.find(d=>d.id===id);
+const getMatkul = id => state.matkul.find(m=>m.id===id);
+const getKelas = id => state.kelas.find(k=>k.id===id);
+const getRuangan = id => state.ruangan.find(r=>r.id===id);
+const getSlot = id => state.slots.find(s=>s.id===id);
+const getSlotLabel = id => { const s=getSlot(id); return s? (s.mulai+' - '+s.selesai) : '-'; };
+function sortedSlots(){ return [...state.slots].sort((a,b)=> (a.mulai||'').localeCompare(b.mulai||'')); }
+function sortedHari(){ return HARI_MASTER.filter(h=>state.hari.includes(h)); }
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+const PAGE_TITLES = {
+  dashboard:['Dashboard','Ringkasan data dan status jadwal'],
+  dosen:['Data Dosen','Kelola daftar dosen pengampu'],
+  matkul:['Mata Kuliah','Kelola daftar mata kuliah'],
+  kelas:['Kelas','Kelola kelompok kelas mahasiswa'],
+  ruangan:['Ruangan','Kelola ruang kelas dan laboratorium'],
+  pengaturan:['Hari & Slot Jam','Atur hari aktif dan slot waktu perkuliahan'],
+  generator:['Generator Jadwal','Buat jadwal otomatis anti-bentrok'],
+  kalender:['Kalender Mingguan','Lihat jadwal kuliah dalam tampilan mingguan'],
+  data:['Export / Import / Demo','Kelola cadangan data aplikasi']
+};
+
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById('page-'+name);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.menu-item').forEach(m=>m.classList.toggle('active', m.dataset.page===name));
+  document.getElementById('pagetitle').textContent = PAGE_TITLES[name][0];
+  document.getElementById('pagesub').textContent = PAGE_TITLES[name][1];
+  toggleSidebar(false);
+  renderAll();
+  window.scrollTo(0,0);
+}
+document.getElementById('menu').addEventListener('click', e=>{
+  const item = e.target.closest('.menu-item');
+  if(item) goPage(item.dataset.page);
+});
+
+function toggleSidebar(force){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const show = force !== undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', show);
+  ov.classList.toggle('show', show);
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+function toast(msg, type='info', duration=3500){
+  const wrap = document.getElementById('toast-wrap');
+  const icons = {success:'✅',error:'⛔',warn:'⚠️',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className = 'toast '+type;
+  el.innerHTML = '<span>'+(icons[type]||'ℹ️')+'</span><span>'+msg+'</span>';
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, duration);
+}
+
+/* =========================================================
+   MODAL HELPERS
+========================================================= */
+function openModalRaw(title, bodyHtml, footHtml){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-foot').innerHTML = footHtml;
+  document.getElementById('modal-backdrop').classList.add('show');
+}
+function closeModal(){ document.getElementById('modal-backdrop').classList.remove('show'); }
+document.getElementById('modal-backdrop').addEventListener('click', e=>{ if(e.target.id==='modal-backdrop') closeModal(); });
+
+function confirmDialog(msg, onYes){
+  openModalRaw('Konfirmasi', '<p style="margin:0;">'+msg+'</p>',
+    '<button class="btn btn-secondary" onclick="closeModal()">Batal</button>'+
+    '<button class="btn btn-danger-solid" id="confirm-yes-btn">Ya, Lanjutkan</button>');
+  document.getElementById('confirm-yes-btn').onclick = ()=>{ closeModal(); onYes(); };
+}
+
+function esc(str){ return String(str==null?'':str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* =========================================================
+   RENDER: DASHBOARD
+========================================================= */
+function renderDashboard(){
+  const stats = [
+    {lbl:'Dosen', num:state.dosen.length, ic:'👨‍🏫', bg:'#eef2ff', color:'#4338ca'},
+    {lbl:'Mata Kuliah', num:state.matkul.length, ic:'📘', bg:'#ecfeff', color:'#0e7490'},
+    {lbl:'Kelas', num:state.kelas.length, ic:'🎓', bg:'#f0fdf4', color:'#15803d'},
+    {lbl:'Ruangan', num:state.ruangan.length, ic:'🏫', bg:'#fff7ed', color:'#c2410c'},
+  ];
+  document.getElementById('dash-stats').innerHTML = stats.map(s=>`
+    <div class="card stat-card">
+      <div class="top">
+        <div class="ic" style="background:${s.bg};color:${s.color};">${s.ic}</div>
+      </div>
+      <div class="num">${s.num}</div>
+      <div class="lbl">${s.lbl}</div>
+    </div>`).join('');
+
+  const totalSesi = state.matkul.reduce((a,m)=>a + (m.kelasIds?.length||0) * (m.sesiPerMinggu||1), 0);
+  const terjadwal = state.jadwal.length;
+  const gagal = state.gagal.length;
+  const conflicts = detectConflicts();
+  let html = '';
+  if(totalSesi===0){
+    html = '<p class="small-muted">Belum ada mata kuliah yang ditugaskan ke kelas. Lengkapi data master terlebih dahulu lalu jalankan generator.</p>';
+  } else {
+    html += `<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px;">
+      <div><div style="font-size:22px;font-weight:800;">${totalSesi}</div><div class="small-muted">Total sesi dibutuhkan</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--teal-d);">${terjadwal}</div><div class="small-muted">Berhasil dijadwalkan</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:${gagal>0?'var(--rose)':'#94a3b8'};">${gagal}</div><div class="small-muted">Gagal dijadwalkan</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:${conflicts.length>0?'var(--rose)':'var(--green)'};">${conflicts.length}</div><div class="small-muted">Bentrok terdeteksi</div></div>
+    </div>`;
+    if(conflicts.length>0){
+      html += '<div class="badge badge-rose">⚠ Ada bentrok pada jadwal, buka menu Generator untuk memperbaiki</div>';
+    } else if(terjadwal>0){
+      html += '<div class="badge badge-green">✓ Jadwal bebas bentrok</div>';
+    }
+  }
+  document.getElementById('dash-genstatus').innerHTML = html;
+}
+
+/* =========================================================
+   CRUD: DOSEN
+========================================================= */
+function renderDosen(){
+  const q = (document.getElementById('search-dosen')?.value||'').toLowerCase();
+  const list = state.dosen.filter(d => !q || (d.nama+d.kode+d.email).toLowerCase().includes(q));
+  const tbody = document.getElementById('tbl-dosen');
+  if(list.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Belum ada data dosen. Klik "Tambah Dosen" untuk mulai.</td></tr>'; return; }
+  tbody.innerHTML = list.map(d=>{
+    const jumlahMk = state.matkul.filter(m=>m.dosenId===d.id).length;
+    return `<tr>
+      <td><span class="badge badge-gray">${esc(d.kode)}</span></td>
+      <td><strong>${esc(d.nama)}</strong></td>
+      <td>${esc(d.email||'-')}</td>
+      <td>${jumlahMk}</td>
+      <td class="row-actions">
+        <button class="iconbtn" title="Ubah" onclick="openDosenModal('${d.id}')">✏️</button>
+        <button class="iconbtn danger" title="Hapus" onclick="deleteDosen('${d.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function openDosenModal(id){
+  const d = id ? getDosen(id) : {id:'', kode:'', nama:'', email:''};
+  const body = `
+    <div class="field"><label class="field-label">Kode Dosen</label><input type="text" id="f-kode" value="${esc(d.kode)}" placeholder="Contoh: D001"></div>
+    <div class="field"><label class="field-label">Nama Dosen</label><input type="text" id="f-nama" value="${esc(d.nama)}" placeholder="Contoh: Dr. Ahmad Fauzi, M.Kom"></div>
+    <div class="field"><label class="field-label">Email (opsional)</label><input type="email" id="f-email" value="${esc(d.email||'')}" placeholder="nama@kampus.ac.id"></div>`;
+  const foot = `<button class="btn btn-secondary" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveDosen('${id||''}')">💾 Simpan</button>`;
+  openModalRaw(id?'Ubah Dosen':'Tambah Dosen', body, foot);
+}
+function saveDosen(id){
+  const kode = document.getElementById('f-kode').value.trim();
+  const nama = document.getElementById('f-nama').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  if(!kode || !nama){ toast('Kode dan nama dosen wajib diisi.','error'); return; }
+  if(id){
+    const d = getDosen(id); d.kode=kode; d.nama=nama; d.email=email;
+    toast('Data dosen berhasil diperbarui.','success');
+  } else {
+    state.dosen.push({id:uid('dsn_'), kode, nama, email});
+    toast('Dosen baru berhasil ditambahkan.','success');
+  }
+  saveState(); closeModal(); renderDosen(); renderDashboard();
+}
+function deleteDosen(id){
+  const dipakai = state.matkul.some(m=>m.dosenId===id);
+  if(dipakai){ toast('Dosen tidak dapat dihapus karena masih menjadi pengampu mata kuliah.','error'); return; }
+  confirmDialog('Hapus data dosen ini? Tindakan tidak dapat dibatalkan.', ()=>{
+    state.dosen = state.dosen.filter(d=>d.id!==id);
+    saveState(); renderDosen(); renderDashboard();
+    toast('Dosen berhasil dihapus.','success');
+  });
+}
+
+/* =========================================================
+   CRUD: KELAS
+========================================================= */
+function renderKelas(){
+  const q = (document.getElementById('search-kelas')?.value||'').toLowerCase();
+  const list = state.kelas.filter(k => !q || k.nama.toLowerCase().includes(q));
+  const tbody = document.getElementById('tbl-kelas');
+  if(list.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Belum ada data kelas.</td></tr>'; return; }
+  tbody.innerHTML = list.map(k=>{
+    const jumlahMk = state.matkul.filter(m=>(m.kelasIds||[]).includes(k.id)).length;
+    return `<tr>
+      <td><strong>${esc(k.nama)}</strong></td>
+      <td>${k.jumlahMahasiswa} mahasiswa</td>
+      <td>${jumlahMk}</td>
+      <td class="row-actions">
+        <button class="iconbtn" title="Ubah" onclick="openKelasModal('${k.id}')">✏️</button>
+        <button class="iconbtn danger" title="Hapus" onclick="deleteKelas('${k.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function openKelasModal(id){
+  const k = id ? getKelas(id) : {id:'', nama:'', jumlahMahasiswa:30};
+  const body = `
+    <div class="field"><label class="field-label">Nama Kelas</label><input type="text" id="f-nama" value="${esc(k.nama)}" placeholder="Contoh: TI-3A"></div>
+    <div class="field"><label class="field-label">Jumlah Mahasiswa</label><input type="number" min="1" id="f-jumlah" value="${k.jumlahMahasiswa}"></div>`;
+  const foot = `<button class="btn btn-secondary" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveKelas('${id||''}')">💾 Simpan</button>`;
+  openModalRaw(id?'Ubah Kelas':'Tambah Kelas', body, foot);
+}
+function saveKelas(id){
+  const nama = document.getElementById('f-nama').value.trim();
+  const jumlah = parseInt(document.getElementById('f-jumlah').value,10);
+  if(!nama || !jumlah || jumlah<1){ toast('Nama kelas dan jumlah mahasiswa (>0) wajib diisi.','error'); return; }
+  if(id){ const k=getKelas(id); k.nama=nama; k.jumlahMahasiswa=jumlah; toast('Data kelas diperbarui.','success'); }
+  else{ state.kelas.push({id:uid('kls_'), nama, jumlahMahasiswa:jumlah}); toast('Kelas baru ditambahkan.','success'); }
+  saveState(); closeModal(); renderKelas(); renderDashboard();
+}
+function deleteKelas(id){
+  const dipakai = state.matkul.some(m=>(m.kelasIds||[]).includes(id));
+  if(dipakai){ toast('Kelas tidak dapat dihapus karena masih mengambil mata kuliah tertentu.','error'); return; }
+  confirmDialog('Hapus data kelas ini?', ()=>{
+    state.kelas = state.kelas.filter(k=>k.id!==id);
+    saveState(); renderKelas(); renderDashboard();
+    toast('Kelas berhasil dihapus.','success');
+  });
+}
+
+/* =========================================================
+   CRUD: RUANGAN
+========================================================= */
+function renderRuangan(){
+  const q = (document.getElementById('search-ruangan')?.value||'').toLowerCase();
+  const fj = document.getElementById('filter-ruangan-jenis')?.value||'';
+  const list = state.ruangan.filter(r => (!q || r.nama.toLowerCase().includes(q)) && (!fj || r.jenis===fj));
+  const tbody = document.getElementById('tbl-ruangan');
+  if(list.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Belum ada data ruangan.</td></tr>'; return; }
+  tbody.innerHTML = list.map(r=>`<tr>
+      <td><strong>${esc(r.nama)}</strong></td>
+      <td>${r.kapasitas} orang</td>
+      <td><span class="badge ${r.jenis==='Lab'?'badge-amber':'badge-teal'}">${r.jenis}</span></td>
+      <td class="row-actions">
+        <button class="iconbtn" title="Ubah" onclick="openRuanganModal('${r.id}')">✏️</button>
+        <button class="iconbtn danger" title="Hapus" onclick="deleteRuangan('${r.id}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+function openRuanganModal(id){
+  const r = id ? getRuangan(id) : {id:'', nama:'', kapasitas:40, jenis:'Kelas'};
+  const body = `
+    <div class="field"><label class="field-label">Nama Ruangan</label><input type="text" id="f-nama" value="${esc(r.nama)}" placeholder="Contoh: R.301"></div>
+    <div class="field"><label class="field-label">Kapasitas</label><input type="number" min="1" id="f-kap" value="${r.kapasitas}"></div>
+    <div class="field"><label class="field-label">Jenis Ruangan</label>
+      <select id="f-jenis"><option value="Kelas" ${r.jenis==='Kelas'?'selected':''}>Ruang Kelas</option><option value="Lab" ${r.jenis==='Lab'?'selected':''}>Laboratorium</option></select>
+    </div>`;
+  const foot = `<button class="btn btn-secondary" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveRuangan('${id||''}')">💾 Simpan</button>`;
+  openModalRaw(id?'Ubah Ruangan':'Tambah Ruangan', body, foot);
+}
+function saveRuangan(id){
+  const nama = document.getElementById('f-nama').value.trim();
+  const kap = parseInt(document.getElementById('f-kap').value,10);
+  const jenis = document.getElementById('f-jenis').value;
+  if(!nama || !kap || kap<1){ toast('Nama ruangan dan kapasitas (>0) wajib diisi.','error'); return; }
+  if(id){ const r=getRuangan(id); r.nama=nama; r.kapasitas=kap; r.jenis=jenis; toast('Data ruangan diperbarui.','success'); }
+  else{ state.ruangan.push({id:uid('rg_'), nama, kapasitas:kap, jenis}); toast('Ruangan baru ditambahkan.','success'); }
+  saveState(); closeModal(); renderRuangan(); renderDashboard();
+}
+function deleteRuangan(id){
+  const dipakai = state.jadwal.some(j=>j.ruanganId===id);
+  if(dipakai){ toast('Ruangan tidak dapat dihapus karena sedang dipakai di jadwal. Hapus/generate ulang jadwal terlebih dahulu.','error'); return; }
+  confirmDialog('Hapus data ruangan ini?', ()=>{
+    state.ruangan = state.ruangan.filter(r=>r.id!==id);
+    saveState(); renderRuangan(); renderDashboard();
+    toast('Ruangan berhasil dihapus.','success');
+  });
+}
+
+/* =========================================================
+   CRUD: MATA KULIAH
+========================================================= */
+function renderMatkul(){
+  const q = (document.getElementById('search-matkul')?.value||'').toLowerCase();
+  const fj = document.getElementById('filter-matkul-jenis')?.value||'';
+  const list = state.matkul.filter(m => (!q || (m.kode+m.nama).toLowerCase().includes(q)) && (!fj || m.jenis===fj));
+  const tbody = document.getElementById('tbl-matkul');
+  if(list.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Belum ada data mata kuliah.</td></tr>'; return; }
+  tbody.innerHTML = list.map(m=>{
+    const dsn = getDosen(m.dosenId);
+    const kelasNames = (m.kelasIds||[]).map(kid=>getKelas(kid)?.nama).filter(Boolean);
+    return `<tr>
+      <td><span class="badge badge-gray">${esc(m.kode)}</span></td>
+      <td><strong>${esc(m.nama)}</strong></td>
+      <td>${m.sks}</td>
+      <td><span class="badge ${m.jenis==='Praktikum'?'badge-amber':'badge-teal'}">${m.jenis}</span></td>
+      <td>${dsn?esc(dsn.nama):'<span style="color:var(--rose);">Belum ada</span>'}</td>
+      <td>${kelasNames.length?kelasNames.map(n=>`<span class="badge badge-gray" style="margin:1px;">${esc(n)}</span>`).join(''):'<span style="color:var(--rose);">Belum ada</span>'}</td>
+      <td>${m.sesiPerMinggu||1}x</td>
+      <td class="row-actions">
+        <button class="iconbtn" title="Ubah" onclick="openMatkulModal('${m.id}')">✏️</button>
+        <button class="iconbtn danger" title="Hapus" onclick="deleteMatkul('${m.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function openMatkulModal(id){
+  const m = id ? getMatkul(id) : {id:'', kode:'', nama:'', sks:2, jenis:'Teori', dosenId:'', kelasIds:[], sesiPerMinggu:1};
+  const dosenOpt = state.dosen.map(d=>`<option value="${d.id}" ${m.dosenId===d.id?'selected':''}>${esc(d.nama)}</option>`).join('');
+  const kelasChecks = state.kelas.map(k=>`
+    <label class="checkbox-row"><input type="checkbox" class="f-kelas-chk" value="${k.id}" ${(m.kelasIds||[]).includes(k.id)?'checked':''}> ${esc(k.nama)} <span class="small-muted">(${k.jumlahMahasiswa})</span></label>`).join('');
+  const body = `
+    <div class="two-col">
+      <div class="field"><label class="field-label">Kode Mata Kuliah</label><input type="text" id="f-kode" value="${esc(m.kode)}" placeholder="Contoh: TI201"></div>
+      <div class="field"><label class="field-label">SKS</label><input type="number" min="1" max="6" id="f-sks" value="${m.sks}"></div>
+    </div>
+    <div class="field"><label class="field-label">Nama Mata Kuliah</label><input type="text" id="f-nama" value="${esc(m.nama)}" placeholder="Contoh: Basis Data"></div>
+    <div class="two-col">
+      <div class="field"><label class="field-label">Jenis</label>
+        <select id="f-jenis"><option value="Teori" ${m.jenis==='Teori'?'selected':''}>Teori</option><option value="Praktikum" ${m.jenis==='Praktikum'?'selected':''}>Praktikum (wajib di Lab)</option></select>
+      </div>
+      <div class="field"><label class="field-label">Sesi Pertemuan / Minggu</label><input type="number" min="1" max="4" id="f-sesi" value="${m.sesiPerMinggu||1}"></div>
+    </div>
+    <div class="field"><label class="field-label">Dosen Pengampu</label>
+      <select id="f-dosen"><option value="">-- Pilih Dosen --</option>${dosenOpt}</select>
+      ${state.dosen.length===0?'<div class="hint" style="color:var(--rose);">Belum ada data dosen. Tambahkan dosen terlebih dahulu.</div>':''}
+    </div>
+    <div class="field"><label class="field-label">Kelas yang Mengambil Mata Kuliah Ini</label>
+      <div class="checkbox-grid">${kelasChecks || '<span class="small-muted">Belum ada data kelas.</span>'}</div>
+    </div>`;
+  const foot = `<button class="btn btn-secondary" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveMatkul('${id||''}')">💾 Simpan</button>`;
+  openModalRaw(id?'Ubah Mata Kuliah':'Tambah Mata Kuliah', body, foot);
+}
+function saveMatkul(id){
+  const kode = document.getElementById('f-kode').value.trim();
+  const nama = document.getElementById('f-nama').value.trim();
+  const sks = parseInt(document.getElementById('f-sks').value,10);
+  const jenis = document.getElementById('f-jenis').value;
+  const sesi = parseInt(document.getElementById('f-sesi').value,10) || 1;
+  const dosenId = document.getElementById('f-dosen').value;
+  const kelasIds = Array.from(document.querySelectorAll('.f-kelas-chk:checked')).map(c=>c.value);
+  if(!kode || !nama || !sks){ toast('Kode, nama, dan SKS wajib diisi.','error'); return; }
+  if(id){
+    const m = getMatkul(id);
+    Object.assign(m,{kode,nama,sks,jenis,sesiPerMinggu:sesi,dosenId,kelasIds});
+    toast('Data mata kuliah diperbarui.','success');
+  } else {
+    state.matkul.push({id:uid('mk_'), kode, nama, sks, jenis, sesiPerMinggu:sesi, dosenId, kelasIds});
+    toast('Mata kuliah baru ditambahkan.','success');
+  }
+  saveState(); closeModal(); renderMatkul(); renderDashboard();
+}
+function deleteMatkul(id){
+  confirmDialog('Hapus mata kuliah ini? Jadwal terkait mata kuliah ini (jika ada) juga akan dihapus.', ()=>{
+    state.matkul = state.matkul.filter(m=>m.id!==id);
+    state.jadwal = state.jadwal.filter(j=>j.matkulId!==id);
+    state.gagal = state.gagal.filter(g=>g.matkulId!==id);
+    saveState(); renderMatkul(); renderDashboard();
+    toast('Mata kuliah berhasil dihapus.','success');
+  });
+}
+
+/* =========================================================
+   PENGATURAN: HARI & SLOT
+========================================================= */
+function renderPengaturan(){
+  document.getElementById('hari-checklist').innerHTML = HARI_MASTER.map(h=>`
+    <label class="checkbox-row" style="font-size:14px;">
+      <input type="checkbox" onchange="toggleHari('${h}', this.checked)" ${state.hari.includes(h)?'checked':''}> ${h}
+    </label>`).join('');
+  const tbody = document.getElementById('tbl-slot');
+  const slots = sortedSlots();
+  if(slots.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="3">Belum ada slot jam. Tambahkan manual atau gunakan slot default.</td></tr>'; return; }
+  tbody.innerHTML = slots.map(s=>`<tr>
+      <td>${esc(s.mulai)}</td><td>${esc(s.selesai)}</td>
+      <td class="row-actions">
+        <button class="iconbtn" title="Ubah" onclick="openSlotModal('${s.id}')">✏️</button>
+        <button class="iconbtn danger" title="Hapus" onclick="deleteSlot('${s.id}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+function toggleHari(h, checked){
+  if(checked){ if(!state.hari.includes(h)) state.hari.push(h); }
+  else { state.hari = state.hari.filter(x=>x!==h); }
+  saveState(); renderKalenderFilters();
+  toast('Pengaturan hari diperbarui.','success', 1800);
+}
+function openSlotModal(id){
+  const s = id ? getSlot(id) : {id:'', mulai:'07:00', selesai:'08:40'};
+  const body = `
+    <div class="field"><label class="field-label">Jam Mulai</label><input type="time" id="f-mulai" value="${s.mulai}"></div>
+    <div class="field"><label class="field-label">Jam Selesai</label><input type="time" id="f-selesai" value="${s.selesai}"></div>`;
+  const foot = `<button class="btn btn-secondary" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveSlot('${id||''}')">💾 Simpan</button>`;
+  openModalRaw(id?'Ubah Slot Jam':'Tambah Slot Jam', body, foot);
+}
+function saveSlot(id){
+  const mulai = document.getElementById('f-mulai').value;
+  const selesai = document.getElementById('f-selesai').value;
+  if(!mulai || !selesai || mulai>=selesai){ toast('Jam mulai harus lebih awal dari jam selesai.','error'); return; }
+  if(id){ const s=getSlot(id); s.mulai=mulai; s.selesai=selesai; toast('Slot jam diperbarui.','success'); }
+  else{ state.slots.push({id:uid('slot_'), mulai, selesai}); toast('Slot jam baru ditambahkan.','success'); }
+  saveState(); closeModal(); renderPengaturan(); renderKalenderFilters();
+}
+function deleteSlot(id){
+  const dipakai = state.jadwal.some(j=>j.slotId===id);
+  if(dipakai){ toast('Slot ini masih dipakai di jadwal. Hapus/generate ulang jadwal terlebih dahulu.','error'); return; }
+  confirmDialog('Hapus slot jam ini?', ()=>{
+    state.slots = state.slots.filter(s=>s.id!==id);
+    saveState(); renderPengaturan(); renderKalenderFilters();
+    toast('Slot jam dihapus.','success');
+  });
+}
+function generateDefaultSlots(){
+  confirmDialog('Buat 5 slot default (100 menit) mulai 07:00? Slot yang sudah ada tidak akan dihapus.', ()=>{
+    const starts = ['07:00','08:40','10:20','13:00','14:40'];
+    const dur = 100;
+    starts.forEach(st=>{
+      const [h,m] = st.split(':').map(Number);
+      const endMin = h*60+m+dur;
+      const eh = String(Math.floor(endMin/60)).padStart(2,'0');
+      const em = String(endMin%60).padStart(2,'0');
+      state.slots.push({id:uid('slot_'), mulai:st, selesai:eh+':'+em});
+    });
+    saveState(); renderPengaturan(); renderKalenderFilters();
+    toast('5 slot default berhasil dibuat.','success');
+  });
+}
+
+/* =========================================================
+   GENERATOR ALGORITHM
+========================================================= */
+function buildSessions(){
+  const sessions = []; const invalid = [];
+  state.matkul.forEach(mk=>{
+    if(!mk.dosenId){ invalid.push({matkulId:mk.id, kelasId:null, sesiKe:1, alasan:'Mata kuliah ini belum memiliki dosen pengampu.'}); return; }
+    if(!mk.kelasIds || mk.kelasIds.length===0){ invalid.push({matkulId:mk.id, kelasId:null, sesiKe:1, alasan:'Mata kuliah ini belum ditugaskan ke kelas manapun.'}); return; }
+    mk.kelasIds.forEach(kid=>{
+      const n = mk.sesiPerMinggu||1;
+      for(let s=1;s<=n;s++) sessions.push({matkulId:mk.id, kelasId:kid, sesiKe:s});
+    });
+  });
+  return {sessions, invalid};
+}
+
+function generateJadwal(){
+  if(state.hari.length===0 || state.slots.length===0){
+    toast('Tentukan minimal 1 hari aktif dan 1 slot jam di menu "Hari & Slot Jam" sebelum generate.','error');
+    return;
+  }
+  const {sessions, invalid} = buildSessions();
+  state.jadwal = []; state.gagal = [...invalid];
+
+  // heuristic sort: praktikum dulu, lalu kelas besar dulu, lalu sks besar dulu
+  sessions.sort((a,b)=>{
+    const mkA=getMatkul(a.matkulId), mkB=getMatkul(b.matkulId);
+    const klsA=getKelas(a.kelasId), klsB=getKelas(b.kelasId);
+    const pA = mkA.jenis==='Praktikum'?0:1, pB = mkB.jenis==='Praktikum'?0:1;
+    if(pA!==pB) return pA-pB;
+    const capDiff = (klsB?.jumlahMahasiswa||0) - (klsA?.jumlahMahasiswa||0);
+    if(capDiff!==0) return capDiff;
+    return (mkB.sks||0) - (mkA.sks||0);
+  });
+
+  const dosenUsage={}, kelasUsage={}, ruanganUsage={};
+  const dayLoad={}, slotLoad={};
+  const hariAktif = sortedHari(); const slotAktif = sortedSlots();
+  hariAktif.forEach(h=>dayLoad[h]=0);
+  slotAktif.forEach(sl=>slotLoad[sl.id]=0);
+
+  sessions.forEach(sess=>{
+    const mk = getMatkul(sess.matkulId); const kelas = getKelas(sess.kelasId);
+    if(!mk || !kelas) return;
+    const dosenId = mk.dosenId;
+
+    let combos = [];
+    hariAktif.forEach(h=>{ slotAktif.forEach(sl=>{ combos.push({hari:h, slotId:sl.id, score: dayLoad[h]+slotLoad[sl.id]}); }); });
+    combos.sort((a,b)=>a.score-b.score);
+
+    let placed=false;
+    const blocked = {noRoom:0, dosenBusy:0, kelasBusy:0};
+    for(const combo of combos){
+      const key = combo.hari+'|'+combo.slotId;
+      if(dosenUsage[dosenId]?.[key]){ blocked.dosenBusy++; continue; }
+      if(kelasUsage[sess.kelasId]?.[key]){ blocked.kelasBusy++; continue; }
+
+      let candidates = state.ruangan.filter(r=>{
+        if(ruanganUsage[r.id]?.[key]) return false;
+        if(r.kapasitas < kelas.jumlahMahasiswa) return false;
+        if(mk.jenis==='Praktikum' && r.jenis!=='Lab') return false;
+        return true;
+      });
+      if(mk.jenis!=='Praktikum'){
+        const preferred = candidates.filter(r=>r.jenis==='Kelas');
+        if(preferred.length) candidates = preferred;
+      }
+      if(candidates.length===0){ blocked.noRoom++; continue; }
+      candidates.sort((a,b)=>a.kapasitas-b.kapasitas);
+      const room = candidates[0];
+
+      dosenUsage[dosenId] = dosenUsage[dosenId]||{}; dosenUsage[dosenId][key]=true;
+      kelasUsage[sess.kelasId] = kelasUsage[sess.kelasId]||{}; kelasUsage[sess.kelasId][key]=true;
+      ruanganUsage[room.id] = ruanganUsage[room.id]||{}; ruanganUsage[room.id][key]=true;
+      dayLoad[combo.hari]++; slotLoad[combo.slotId]++;
+
+      state.jadwal.push({id:uid('jd_'), matkulId:mk.id, kelasId:kelas.id, dosenId, ruanganId:room.id, hari:combo.hari, slotId:combo.slotId, sesiKe:sess.sesiKe});
+      placed = true;
+      break;
+    }
+
+    if(!placed){
+      const total = combos.length;
+      let alasan;
+      const cukupRuang = state.ruangan.some(r => r.kapasitas>=kelas.jumlahMahasiswa && (mk.jenis!=='Praktikum' || r.jenis==='Lab'));
+      if(!cukupRuang){
+        alasan = mk.jenis==='Praktikum'
+          ? `Tidak ada ruangan Lab dengan kapasitas ≥ ${kelas.jumlahMahasiswa} mahasiswa (kelas ${kelas.nama}).`
+          : `Tidak ada ruangan dengan kapasitas ≥ ${kelas.jumlahMahasiswa} mahasiswa (kelas ${kelas.nama}).`;
+      } else if(blocked.dosenBusy >= total*0.6){
+        alasan = `Dosen ${getDosen(dosenId)?.nama||'-'} sudah penuh jadwalnya di hampir semua slot yang tersedia.`;
+      } else if(blocked.kelasBusy >= total*0.6){
+        alasan = `Kelas ${kelas.nama} sudah memiliki mata kuliah lain di hampir semua slot yang tersedia.`;
+      } else {
+        alasan = `Semua kombinasi hari/jam/ruangan yang valid untuk sesi ini sudah terpakai (ruangan penuh). Tambah ruangan atau slot jam untuk menampung sesi ini.`;
+      }
+      state.gagal.push({matkulId:mk.id, kelasId:kelas.id, sesiKe:sess.sesiKe, alasan});
+    }
+  });
+
+  saveState();
+  renderGenerator(); renderDashboard(); renderKalender();
+  if(state.gagal.length===0){
+    toast('Jadwal berhasil dibuat untuk seluruh sesi tanpa bentrok!','success');
+  } else {
+    toast(state.jadwal.length+' sesi berhasil dijadwalkan, '+state.gagal.length+' sesi gagal. Lihat detail di halaman Generator.','warn',5000);
+  }
+}
+function confirmGenerate(){
+  if(state.jadwal.length>0){
+    confirmDialog('Menjalankan generator akan menghapus dan membuat ulang seluruh jadwal saat ini. Lanjutkan?', generateJadwal);
+  } else generateJadwal();
+}
+
+/* Conflict detection */
+function detectConflicts(){
+  const list=[];
+  const byDosen={}, byKelas={}, byRuang={};
+  state.jadwal.forEach(j=>{
+    const key=j.hari+'|'+j.slotId;
+    (byDosen[j.dosenId+'::'+key] = byDosen[j.dosenId+'::'+key]||[]).push(j);
+    (byKelas[j.kelasId+'::'+key] = byKelas[j.kelasId+'::'+key]||[]).push(j);
+    (byRuang[j.ruanganId+'::'+key] = byRuang[j.ruanganId+'::'+key]||[]).push(j);
+  });
+  Object.values(byDosen).forEach(arr=>{ if(arr.length>1){ const d=getDosen(arr[0].dosenId);
+    list.push({type:'Dosen Bentrok', jadwalIds:arr.map(a=>a.id), detail:`Dosen ${d?.nama||'-'} mengajar ${arr.length} kelas sekaligus pada ${arr[0].hari}, ${getSlotLabel(arr[0].slotId)}.`}); }});
+  Object.values(byKelas).forEach(arr=>{ if(arr.length>1){ const k=getKelas(arr[0].kelasId);
+    list.push({type:'Kelas Bentrok', jadwalIds:arr.map(a=>a.id), detail:`Kelas ${k?.nama||'-'} memiliki ${arr.length} mata kuliah sekaligus pada ${arr[0].hari}, ${getSlotLabel(arr[0].slotId)}.`}); }});
+  Object.values(byRuang).forEach(arr=>{ if(arr.length>1){ const r=getRuangan(arr[0].ruanganId);
+    list.push({type:'Ruangan Bentrok', jadwalIds:arr.map(a=>a.id), detail:`Ruangan ${r?.nama||'-'} dipakai ${arr.length} kelas sekaligus pada ${arr[0].hari}, ${getSlotLabel(arr[0].slotId)}.`}); }});
+  state.jadwal.forEach(j=>{
+    const mk=getMatkul(j.matkulId), kelas=getKelas(j.kelasId), room=getRuangan(j.ruanganId);
+    if(room && kelas && room.kapasitas < kelas.jumlahMahasiswa){
+      list.push({type:'Kapasitas Kurang', jadwalIds:[j.id], detail:`Ruangan ${room.nama} (kapasitas ${room.kapasitas}) tidak cukup untuk kelas ${kelas.nama} (${kelas.jumlahMahasiswa} mahasiswa).`});
+    }
+    if(mk && room && mk.jenis==='Praktikum' && room.jenis!=='Lab'){
+      list.push({type:'Jenis Ruangan Salah', jadwalIds:[j.id], detail:`Mata kuliah praktikum "${mk.nama}" dijadwalkan di ruangan non-Lab (${room.nama}).`});
+    }
+  });
+  return list;
+}
+function runCekBentrok(){
+  const conflicts = detectConflicts();
+  renderGenerator(conflicts);
+  if(conflicts.length===0) toast('Tidak ditemukan bentrok pada jadwal saat ini. 👍','success');
+  else toast('Ditemukan '+conflicts.length+' bentrok pada jadwal.','error');
+}
+
+/* Auto repair */
+function runPerbaikiBentrok(){
+  const conflicts = detectConflicts();
+  if(conflicts.length===0 && state.gagal.length===0){ toast('Tidak ada bentrok maupun sesi gagal untuk diperbaiki.','info'); return; }
+
+  const idsToFix = new Set();
+  conflicts.forEach(c=>c.jadwalIds.forEach(id=>idsToFix.add(id)));
+
+  const fixedEntries = state.jadwal.filter(j=>!idsToFix.has(j.id));
+  const dosenUsage={}, kelasUsage={}, ruanganUsage={};
+  fixedEntries.forEach(j=>{
+    const key=j.hari+'|'+j.slotId;
+    dosenUsage[j.dosenId]=dosenUsage[j.dosenId]||{}; dosenUsage[j.dosenId][key]=true;
+    kelasUsage[j.kelasId]=kelasUsage[j.kelasId]||{}; kelasUsage[j.kelasId][key]=true;
+    ruanganUsage[j.ruanganId]=ruanganUsage[j.ruanganId]||{}; ruanganUsage[j.ruanganId][key]=true;
+  });
+
+  const hariAktif = sortedHari(); const slotAktif = sortedSlots();
+  let combosAll = [];
+  hariAktif.forEach(h=>{ slotAktif.forEach(sl=>{ combosAll.push({hari:h, slotId:sl.id}); }); });
+
+  let repaired=0, stillFailed=0;
+  const toReplace = state.jadwal.filter(j=>idsToFix.has(j.id));
+  const newJadwal = [...fixedEntries];
+
+  toReplace.forEach(j=>{
+    const mk=getMatkul(j.matkulId), kelas=getKelas(j.kelasId);
+    if(!mk||!kelas){ return; }
+    let placed=false;
+    for(const combo of combosAll){
+      const key=combo.hari+'|'+combo.slotId;
+      if(dosenUsage[j.dosenId]?.[key]) continue;
+      if(kelasUsage[j.kelasId]?.[key]) continue;
+      let candidates = state.ruangan.filter(r=>{
+        if(ruanganUsage[r.id]?.[key]) return false;
+        if(r.kapasitas < kelas.jumlahMahasiswa) return false;
+        if(mk.jenis==='Praktikum' && r.jenis!=='Lab') return false;
+        return true;
+      });
+      if(mk.jenis!=='Praktikum'){ const pref=candidates.filter(r=>r.jenis==='Kelas'); if(pref.length) candidates=pref; }
+      if(candidates.length===0) continue;
+      candidates.sort((a,b)=>a.kapasitas-b.kapasitas);
+      const room=candidates[0];
+      dosenUsage[j.dosenId]=dosenUsage[j.dosenId]||{}; dosenUsage[j.dosenId][key]=true;
+      kelasUsage[j.kelasId]=kelasUsage[j.kelasId]||{}; kelasUsage[j.kelasId][key]=true;
+      ruanganUsage[room.id]=ruanganUsage[room.id]||{}; ruanganUsage[room.id][key]=true;
+      newJadwal.push({...j, hari:combo.hari, slotId:combo.slotId, ruanganId:room.id});
+      placed=true; repaired++;
+      break;
+    }
+    if(!placed){ newJadwal.push(j); stillFailed++; }
+  });
+
+  state.jadwal = newJadwal;
+  saveState();
+  const remaining = detectConflicts();
+  renderGenerator(remaining);
+  renderKalender(); renderDashboard();
+  if(repaired>0 && remaining.length===0){
+    toast(repaired+' sesi berhasil dipindah otomatis. Semua bentrok telah diperbaiki. ✅','success',5000);
+  } else if(repaired>0){
+    toast(repaired+' sesi dipindah, namun masih ada '+remaining.length+' bentrok tersisa yang butuh perhatian manual.','warn',5000);
+  } else {
+    toast('Tidak ditemukan slot alternatif yang valid. Coba tambah ruangan atau slot jam.','error',5000);
+  }
+}
+
+/* Render Generator page */
+function renderGenerator(conflictsOverride){
+  const conflicts = conflictsOverride || detectConflicts();
+  const total = state.jadwal.length + state.gagal.length;
+  let html = '';
+  if(total===0){
+    html = '<div class="card card-pad"><p class="small-muted" style="margin:0;">Belum ada jadwal yang dihasilkan. Lengkapi Data Dosen, Mata Kuliah (+ dosen & kelas), Kelas, Ruangan, serta Hari &amp; Slot Jam, lalu klik "Generate Jadwal".</p></div>';
+  } else {
+    if(state.gagal.length===0 && conflicts.length===0){
+      html += `<div class="success-banner">✅ Semua ${state.jadwal.length} sesi berhasil dijadwalkan tanpa bentrok.</div>`;
+    } else {
+      html += `<div class="grid grid-2" style="margin-bottom:16px;">
+        <div class="card card-pad"><div style="font-size:22px;font-weight:800;color:var(--teal-d);">${state.jadwal.length}</div><div class="small-muted">Sesi berhasil dijadwalkan</div></div>
+        <div class="card card-pad"><div style="font-size:22px;font-weight:800;color:var(--rose);">${state.gagal.length + conflicts.length}</div><div class="small-muted">Sesi gagal / bentrok</div></div>
+      </div>`;
+    }
+    if(conflicts.length>0){
+      html += '<div class="card card-pad" style="margin-bottom:16px;"><h3 style="margin-top:0;font-size:14px;color:var(--rose);">⚠️ Daftar Bentrok</h3>';
+      html += conflicts.map(c=>`<div class="conflict-item"><strong>${c.type}:</strong> ${c.detail}</div>`).join('');
+      html += '</div>';
+    }
+    if(state.gagal.length>0){
+      html += '<div class="card card-pad"><h3 style="margin-top:0;font-size:14px;color:#92400e;">⚠️ Mata Kuliah / Sesi Gagal Dijadwalkan</h3>';
+      html += state.gagal.map(g=>{
+        const mk=getMatkul(g.matkulId), kelas=g.kelasId?getKelas(g.kelasId):null;
+        return `<div class="fail-item"><strong>${mk?esc(mk.nama):'(mata kuliah tidak ditemukan)'}</strong>${kelas?' — Kelas '+esc(kelas.nama):''}${g.sesiKe>1?' (sesi ke-'+g.sesiKe+')':''}<br><span>Alasan: ${esc(g.alasan)}</span></div>`;
+      }).join('');
+      html += '</div>';
+    }
+  }
+  document.getElementById('gen-result').innerHTML = html;
+}
+
+/* =========================================================
+   KALENDER
+========================================================= */
+let kalenderView = 'grid'; // 'grid' or 'table'
+function toggleKalenderView(){
+  kalenderView = kalenderView==='grid' ? 'table' : 'grid';
+  document.getElementById('btn-toggle-view').textContent = kalenderView==='grid' ? '📋 Tampilan Tabel' : '🗓️ Tampilan Kalender';
+  renderKalender();
+}
+function renderKalenderFilters(){
+  const selHari = document.getElementById('filter-kal-hari');
+  const cur1 = selHari.value;
+  selHari.innerHTML = '<option value="">Semua Hari</option>' + sortedHari().map(h=>`<option value="${h}">${h}</option>`).join('');
+  selHari.value = cur1;
+
+  const selKelas = document.getElementById('filter-kal-kelas');
+  const cur2 = selKelas.value;
+  selKelas.innerHTML = '<option value="">Semua Kelas</option>' + state.kelas.map(k=>`<option value="${k.id}">${esc(k.nama)}</option>`).join('');
+  selKelas.value = cur2;
+
+  const selDosen = document.getElementById('filter-kal-dosen');
+  const cur3 = selDosen.value;
+  selDosen.innerHTML = '<option value="">Semua Dosen</option>' + state.dosen.map(d=>`<option value="${d.id}">${esc(d.nama)}</option>`).join('');
+  selDosen.value = cur3;
+
+  const selRuang = document.getElementById('filter-kal-ruangan');
+  const cur4 = selRuang.value;
+  selRuang.innerHTML = '<option value="">Semua Ruangan</option>' + state.ruangan.map(r=>`<option value="${r.id}">${esc(r.nama)}</option>`).join('');
+  selRuang.value = cur4;
+}
+function filteredJadwal(){
+  const q = (document.getElementById('search-kal')?.value||'').toLowerCase();
+  const fHari = document.getElementById('filter-kal-hari')?.value||'';
+  const fKelas = document.getElementById('filter-kal-kelas')?.value||'';
+  const fDosen = document.getElementById('filter-kal-dosen')?.value||'';
+  const fRuang = document.getElementById('filter-kal-ruangan')?.value||'';
+  const conflictIds = new Set();
+  detectConflicts().forEach(c=>c.jadwalIds.forEach(id=>conflictIds.add(id)));
+
+  return state.jadwal.filter(j=>{
+    const mk=getMatkul(j.matkulId), dsn=getDosen(j.dosenId), kls=getKelas(j.kelasId), rg=getRuangan(j.ruanganId);
+    if(fHari && j.hari!==fHari) return false;
+    if(fKelas && j.kelasId!==fKelas) return false;
+    if(fDosen && j.dosenId!==fDosen) return false;
+    if(fRuang && j.ruanganId!==fRuang) return false;
+    if(q){
+      const hay = [mk?.nama, mk?.kode, dsn?.nama, kls?.nama, rg?.nama].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).map(j=>({...j, _conflict: conflictIds.has(j.id)}));
+}
+function renderKalender(){
+  renderKalenderFilters();
+  const list = filteredJadwal();
+  const target = document.getElementById('kalender-target');
+  if(state.jadwal.length===0){
+    target.innerHTML = '<div class="card card-pad"><p class="small-muted" style="margin:0;">Belum ada jadwal. Jalankan Generator Jadwal terlebih dahulu di menu "Generator Jadwal".</p></div>';
+    renderPrintArea([]);
+    return;
+  }
+  if(list.length===0){
+    target.innerHTML = '<div class="card card-pad"><p class="small-muted" style="margin:0;">Tidak ada jadwal yang cocok dengan pencarian/filter.</p></div>';
+    renderPrintArea([]);
+    return;
+  }
+  if(kalenderView==='table'){
+    const sorted = [...list].sort((a,b)=> sortedHari().indexOf(a.hari)-sortedHari().indexOf(b.hari) || (getSlot(a.slotId)?.mulai||'').localeCompare(getSlot(b.slotId)?.mulai||''));
+    target.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Hari</th><th>Jam</th><th>Mata Kuliah</th><th>Dosen</th><th>Kelas</th><th>Ruangan</th><th style="width:70px;">Aksi</th></tr></thead>
+    <tbody>${sorted.map(j=>rowKalender(j)).join('')}</tbody></table></div>`;
+  } else {
+    const hariAktif = sortedHari(); const slotAktif = sortedSlots();
+    let thead = '<tr><td class="slotcell">Jam</td>' + hariAktif.map(h=>`<th>${h}</th>`).join('') + '</tr>';
+    let rows = slotAktif.map(sl=>{
+      let tds = hariAktif.map(h=>{
+        const items = list.filter(j=>j.hari===h && j.slotId===sl.id);
+        const cards = items.map(j=>cardKalender(j)).join('');
+        return `<td class="daycell">${cards||''}</td>`;
+      }).join('');
+      return `<tr><td class="slotcell">${sl.mulai}<br>${sl.selesai}</td>${tds}</tr>`;
+    }).join('');
+    target.innerHTML = `<div class="cal-wrap"><table class="cal"><thead>${thead}</thead><tbody>${rows}</tbody></table></div>`;
+  }
+  renderPrintArea(list);
+}
+function cardKalender(j){
+  const mk=getMatkul(j.matkulId), dsn=getDosen(j.dosenId), kls=getKelas(j.kelasId), rg=getRuangan(j.ruanganId);
+  return `<div class="session-card ${j._conflict?'conflict':''}" onclick="openJadwalModal('${j.id}')">
+    <div class="mk">${esc(mk?.nama||'?')}</div>
+    <div class="meta">${esc(kls?.nama||'?')} · ${esc(rg?.nama||'?')}</div>
+    <div class="meta">${esc(dsn?.nama||'?')}</div>
+  </div>`;
+}
+function rowKalender(j){
+  const mk=getMatkul(j.matkulId), dsn=getDosen(j.dosenId), kls=getKelas(j.kelasId), rg=getRuangan(j.ruanganId);
+  return `<tr>
+    <td>${j.hari}</td><td>${getSlotLabel(j.slotId)}</td>
+    <td><strong>${esc(mk?.nama||'?')}</strong></td>
+    <td>${esc(dsn?.nama||'?')}</td>
+    <td>${esc(kls?.nama||'?')}</td>
+    <td>${esc(rg?.nama||'?')} ${j._conflict?'<span class="badge badge-rose">Bentrok</span>':''}</td>
+    <td class="row-actions"><button class="iconbtn" title="Ubah" onclick="openJadwalModal('${j.id}')">✏️</button></td>
+  </tr>`;
+}
+function renderPrintArea(list){
+  const sorted = [...list].sort((a,b)=> sortedHari().indexOf(a.hari)-sortedHari().indexOf(b.hari) || (getSlot(a.slotId)?.mulai||'').localeCompare(getSlot(b.slotId)?.mulai||''));
+  document.getElementById('print-date').textContent = 'Dicetak: ' + new Date().toLocaleString('id-ID');
+  document.getElementById('print-body').innerHTML = sorted.map(j=>{
+    const mk=getMatkul(j.matkulId), dsn=getDosen(j.dosenId), kls=getKelas(j.kelasId), rg=getRuangan(j.ruanganId);
+    return `<tr><td>${j.hari}</td><td>${getSlotLabel(j.slotId)}</td><td>${esc(mk?.nama||'?')}</td><td>${esc(dsn?.nama||'?')}</td><td>${esc(kls?.nama||'?')}</td><td>${esc(rg?.nama||'?')}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;">Tidak ada data</td></tr>';
+}
+window.addEventListener('beforeprint', ()=>{ document.getElementById('page-print').classList.add('print-active'); });
+window.addEventListener('afterprint', ()=>{ document.getElementById('page-print').classList.remove('print-active'); });
+
+/* Manual edit jadwal entry */
+function openJadwalModal(id){
+  const j = state.jadwal.find(x=>x.id===id);
+  if(!j) return;
+  const mk=getMatkul(j.matkulId), kls=getKelas(j.kelasId), dsn=getDosen(j.dosenId);
+  const hariOpt = sortedHari().map(h=>`<option value="${h}" ${j.hari===h?'selected':''}>${h}</option>`).join('');
+  const slotOpt = sortedSlots().map(s=>`<option value="${s.id}" ${j.slotId===s.id?'selected':''}>${s.mulai} - ${s.selesai}</option>`).join('');
+  const ruangOpt = state.ruangan.map(r=>`<option value="${r.id}" ${j.ruanganId===r.id?'selected':''}>${r.nama} (kap. ${r.kapasitas}, ${r.jenis})</option>`).join('');
+  const body = `
+    <p class="small-muted" style="margin-top:0;"><strong>${esc(mk?.nama)}</strong> — Kelas ${esc(kls?.nama)} — Dosen ${esc(dsn?.nama)}</p>
+    <div class="two-col">
+      <div class="field"><label class="field-label">Hari</label><select id="f-hari">${hariOpt}</select></div>
+      <div class="field"><label class="field-label">Slot Jam</label><select id="f-slot">${slotOpt}</select></div>
+    </div>
+    <div class="field"><label class="field-label">Ruangan</label><select id="f-ruangan">${ruangOpt}</select></div>
+    <div class="hint">Perubahan akan dicek ulang terhadap potensi bentrok sebelum disimpan.</div>`;
+  const foot = `<button class="btn btn-danger" onclick="deleteJadwalEntry('${id}')">🗑️ Hapus Sesi</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="saveJadwalEntry('${id}')">💾 Simpan</button>`;
+  openModalRaw('Ubah Jadwal', body, foot);
+}
+function saveJadwalEntry(id){
+  const j = state.jadwal.find(x=>x.id===id);
+  const hari = document.getElementById('f-hari').value;
+  const slotId = document.getElementById('f-slot').value;
+  const ruanganId = document.getElementById('f-ruangan').value;
+  const mk = getMatkul(j.matkulId), kls = getKelas(j.kelasId), room = getRuangan(ruanganId);
+
+  const conflictDosen = state.jadwal.some(o=>o.id!==id && o.dosenId===j.dosenId && o.hari===hari && o.slotId===slotId);
+  const conflictKelas = state.jadwal.some(o=>o.id!==id && o.kelasId===j.kelasId && o.hari===hari && o.slotId===slotId);
+  const conflictRuang = state.jadwal.some(o=>o.id!==id && o.ruanganId===ruanganId && o.hari===hari && o.slotId===slotId);
+  const kapasitasKurang = room && kls && room.kapasitas < kls.jumlahMahasiswa;
+  const jenisSalah = mk && room && mk.jenis==='Praktikum' && room.jenis!=='Lab';
+
+  if(conflictDosen){ toast('Gagal menyimpan: dosen sudah mengajar kelas lain di waktu tersebut.','error'); return; }
+  if(conflictKelas){ toast('Gagal menyimpan: kelas sudah memiliki mata kuliah lain di waktu tersebut.','error'); return; }
+  if(conflictRuang){ toast('Gagal menyimpan: ruangan sudah dipakai kelas lain di waktu tersebut.','error'); return; }
+  if(kapasitasKurang){ toast('Gagal menyimpan: kapasitas ruangan tidak cukup untuk jumlah mahasiswa kelas ini.','error'); return; }
+  if(jenisSalah){ toast('Gagal menyimpan: mata kuliah praktikum wajib menggunakan ruangan Lab.','error'); return; }
+
+  j.hari = hari; j.slotId = slotId; j.ruanganId = ruanganId;
+  saveState(); closeModal(); renderKalender(); renderGenerator(); renderDashboard();
+  toast('Jadwal berhasil diperbarui tanpa bentrok.','success');
+}
+function deleteJadwalEntry(id){
+  confirmDialog('Hapus sesi jadwal ini?', ()=>{
+    state.jadwal = state.jadwal.filter(j=>j.id!==id);
+    saveState(); closeModal(); renderKalender(); renderGenerator(); renderDashboard();
+    toast('Sesi jadwal dihapus.','success');
+  });
+}
+
+/* =========================================================
+   EXPORT / IMPORT / DEMO / RESET
+========================================================= */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sijadwal-data-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Data berhasil diexport ke file JSON.','success');
+}
+function importData(){
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if(!file){ toast('Pilih file JSON terlebih dahulu.','error'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed || typeof parsed!=='object'){ throw new Error('Format tidak valid'); }
+      confirmDialog('Import akan menggantikan seluruh data saat ini. Lanjutkan?', ()=>{
+        state = Object.assign({dosen:[],matkul:[],kelas:[],ruangan:[],hari:['Senin','Selasa','Rabu','Kamis','Jumat'],slots:[],jadwal:[],gagal:[]}, parsed);
+        saveState(); renderAll(); input.value='';
+        toast('Data berhasil diimport.','success');
+      });
+    }catch(err){
+      toast('Gagal membaca file: format JSON tidak valid.','error');
+    }
+  };
+  reader.readAsText(file);
+}
+function loadDemoData(){
+  confirmDialog('Memuat data demo akan menggantikan seluruh data saat ini. Lanjutkan?', ()=>{
+    const dsn = (kode,nama,email)=>({id:uid('dsn_'),kode,nama,email});
+    const D = [
+      dsn('D001','Dr. Ahmad Fauzi, M.Kom','ahmad.fauzi@kampus.ac.id'),
+      dsn('D002','Siti Rahma, M.T.','siti.rahma@kampus.ac.id'),
+      dsn('D003','Budi Santoso, M.Kom','budi.santoso@kampus.ac.id'),
+      dsn('D004','Dewi Lestari, M.Sc.','dewi.lestari@kampus.ac.id'),
+      dsn('D005','Rian Hidayat, M.T.','rian.hidayat@kampus.ac.id'),
+    ];
+    const kls = (nama,n)=>({id:uid('kls_'),nama,jumlahMahasiswa:n});
+    const K = [ kls('TI-1A',35), kls('TI-1B',38), kls('TI-2A',32), kls('TI-2B',30), kls('TI-3A',28) ];
+    const rg = (nama,kap,jenis)=>({id:uid('rg_'),nama,kapasitas:kap,jenis});
+    const R = [
+      rg('R.101',40,'Kelas'), rg('R.102',40,'Kelas'), rg('R.201',35,'Kelas'),
+      rg('Lab Komputer 1',35,'Lab'), rg('Lab Komputer 2',30,'Lab'),
+    ];
+    const mk = (kode,nama,sks,jenis,dosenId,kelasIds,sesi)=>({id:uid('mk_'),kode,nama,sks,jenis,dosenId,kelasIds,sesiPerMinggu:sesi});
+    const M = [
+      mk('TI101','Algoritma & Pemrograman',3,'Teori',D[0].id,[K[0].id,K[1].id],1),
+      mk('TI102','Praktikum Algoritma',1,'Praktikum',D[0].id,[K[0].id,K[1].id],1),
+      mk('TI103','Basis Data',3,'Teori',D[1].id,[K[2].id,K[3].id],1),
+      mk('TI104','Praktikum Basis Data',1,'Praktikum',D[1].id,[K[2].id,K[3].id],1),
+      mk('TI105','Jaringan Komputer',3,'Teori',D[2].id,[K[3].id,K[4].id],1),
+      mk('TI106','Struktur Data',3,'Teori',D[3].id,[K[0].id,K[2].id],1),
+      mk('TI107','Praktikum Struktur Data',1,'Praktikum',D[3].id,[K[0].id,K[2].id],1),
+      mk('TI108','Matematika Diskrit',2,'Teori',D[4].id,[K[0].id,K[1].id,K[4].id],1),
+      mk('TI109','Sistem Operasi',3,'Teori',D[2].id,[K[4].id],1),
+      mk('TI110','Pemrograman Web',3,'Teori',D[0].id,[K[3].id,K[4].id],1),
+      mk('TI111','Praktikum Pemrograman Web',1,'Praktikum',D[0].id,[K[3].id,K[4].id],1),
+    ];
+    state = {
+      dosen:D, matkul:M, kelas:K, ruangan:R,
+      hari:['Senin','Selasa','Rabu','Kamis','Jumat'],
+      slots:[
+        {id:uid('slot_'),mulai:'07:00',selesai:'08:40'},
+        {id:uid('slot_'),mulai:'08:40',selesai:'10:20'},
+        {id:uid('slot_'),mulai:'10:20',selesai:'12:00'},
+        {id:uid('slot_'),mulai:'13:00',selesai:'14:40'},
+        {id:uid('slot_'),mulai:'14:40',selesai:'16:20'},
+      ],
+      jadwal:[], gagal:[]
+    };
+    saveState(); renderAll();
+    toast('Data demo berhasil dimuat. Buka menu Generator Jadwal untuk membuat jadwal.','success',4500);
+  });
+}
+function resetAllData(){
+  confirmDialog('Semua data (dosen, mata kuliah, kelas, ruangan, pengaturan, dan jadwal) akan dihapus permanen. Lanjutkan?', ()=>{
+    state = {dosen:[],matkul:[],kelas:[],ruangan:[],hari:['Senin','Selasa','Rabu','Kamis','Jumat'],slots:[],jadwal:[],gagal:[]};
+    saveState(); renderAll();
+    toast('Seluruh data berhasil dihapus.','success');
+  });
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+function renderAll(){
+  renderDashboard(); renderDosen(); renderMatkul(); renderKelas(); renderRuangan();
+  renderPengaturan(); renderGenerator(); renderKalenderFilters(); renderKalender();
+}
+loadState();
+renderAll();
+goPage('dashboard');
+
+/* =========================================================
+   PWA: SERVICE WORKER & INSTALL PROMPT
+========================================================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(()=> console.log('Service worker aktif — aplikasi siap dipakai offline.'))
+      .catch(err => console.warn('Gagal mendaftarkan service worker:', err));
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('install-btn').classList.add('show');
+  document.getElementById('install-sidebar-btn').classList.add('show');
+});
+function triggerInstall(){
+  if(!deferredInstallPrompt){
+    toast('Untuk menginstal: buka menu browser lalu pilih "Tambahkan ke Layar Utama" / "Install App".','info',5000);
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(choice=>{
+    if(choice.outcome === 'accepted'){ toast('Aplikasi sedang diinstal ke perangkat Anda. 🎉','success'); }
+    deferredInstallPrompt = null;
+    document.getElementById('install-btn').classList.remove('show');
+    document.getElementById('install-sidebar-btn').classList.remove('show');
+  });
+}
+window.addEventListener('appinstalled', ()=>{
+  toast('SIJADWAL berhasil diinstal sebagai aplikasi. 🎉','success');
+  document.getElementById('install-btn').classList.remove('show');
+  document.getElementById('install-sidebar-btn').classList.remove('show');
+});
+if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true){
+  const ib = document.getElementById('install-btn'); if(ib) ib.remove();
+  const isb = document.getElementById('install-sidebar-btn'); if(isb) isb.remove();
+}
+</script>
+</body>
+</html>
